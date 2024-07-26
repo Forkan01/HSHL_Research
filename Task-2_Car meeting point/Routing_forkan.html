@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Car Animation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="map" style="width: 1900px; height: 1000px"></div>
+
+    <script>
+        //Route - One
+        var location1 = [51.6708806,8.3487947];   //Bahnhofstr., Lippstadt
+        var location2 = [51.67384885,8.364541368286515];   //Dr.-Arnold-Hueck-Straße 3,Lippstadt
+        //Route - Two
+        var location3 = [51.674961, 8.353670];    //Esbecker Str.6, Lippstadt
+        var location4 = [51.670505, 8.364020];    //K51, 59557 Lippstadt
+        //Meeting Point
+        var location5 = [51.672076, 8.355553];    //Rixbecker Str. Lippstadt
+
+        //OpenStreetMap as the tile source
+        var map = L.map('map').setView(location4, 16.49999999999999);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        //Adding Markers
+        var start_marker = L.marker(location1).addTo(map);
+        var end_marker = L.marker(location2).addTo(map);
+        var marker3 = L.marker(location3).addTo(map);
+        var marker4 = L.marker(location4).addTo(map);
+        var marker5 = L.marker(location5).addTo(map);
+
+        // Defining the 1st car
+        var car_icon = L.icon({
+            iconUrl: 'car_icon.png',
+            iconSize: [50, 50],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        // Defining the 2nd car
+        var car_icon2 = L.icon({
+            iconUrl: 'car_icon2.png',
+            iconSize: [50, 50],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        //Adding Cars in the starting locations
+        var car_marker = L.marker(location1, {icon: car_icon}).addTo(map);
+        var car_marker2 = L.marker(location3, {icon: car_icon2}).addTo(map);  // New car marker
+
+        //Defining the OpenRouteService API Key & URL1--> 1st Route & URL2--> 2nd Route
+        var ors_api_key = '5b3ce3597851110001cf62482aa5927220e1482797ca6ea18c66dfa7';
+        var ors_url1 = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ors_api_key}&start=${location1[1]},${location1[0]}&end=${location2[1]},${location2[0]}`;
+        var ors_url2 = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ors_api_key}&start=${location3[1]},${location3[0]}&end=${location4[1]},${location4[0]}`;
+
+        //Request OpenRouteService API for the 1st Route
+        fetch(ors_url1)
+            .then(response => response.json())
+            .then(data => {
+                // Get the route coordinates from the API response
+                var route_coordinates = data.features[0].geometry.coordinates;
+
+                // Convert the route coordinates to the format Leaflet.js expects
+                route_coordinates = route_coordinates.map(function(coord) {
+                    return [coord[1], coord[0]];
+                });
+                // Add the Blue route line to the map
+                var route_line = L.polyline(route_coordinates, {color: 'blue'}).addTo(map);
+                // Animate the 1st car along the route
+                var i = 0;
+                function animate() {
+                    car_marker.setLatLng(route_coordinates[i]);
+                    i++;
+                    if (i < route_coordinates.length) {
+                        // If the car is at location5, wait before continuing
+                        if (car_marker.getLatLng().distanceTo(location5) < 1) {
+                            setTimeout(animate, 4500);
+                        } else {
+                            setTimeout(animate, 500);  //animation speed
+                        }
+                    }
+                }
+                setTimeout(animate, 1000);  //Delay & start animation1   
+            });
+
+        //Request OpenRouteService API for the 2nd Route
+        fetch(ors_url2)
+            .then(response => response.json())
+            .then(data => {
+                // Get the route coordinates from the API response
+                var route_coordinates2 = data.features[0].geometry.coordinates;
+
+                // Convert the route coordinates to the format Leaflet.js expects
+                route_coordinates2 = route_coordinates2.map(function(coord) {
+                    return [coord[1], coord[0]];
+                });
+                // Add the Red route line to the map
+                var route_line2 = L.polyline(route_coordinates2, {color: 'red'}).addTo(map);
+
+                // Animate the 2nd car along the new route
+                var j = 0;
+                function animate2() {
+                    car_marker2.setLatLng(route_coordinates2[j]);
+                    j++;
+                    if (j < route_coordinates2.length) {
+                        // If the car is at location5, wait before continuing
+                        if (car_marker2.getLatLng().distanceTo(location5) < 1) {
+                            setTimeout(animate2, 8000);
+                        } else {
+                            setTimeout(animate2, 500);  //animation speed
+                        }
+                    }
+                }
+                setTimeout(animate2, 1000);  // Delay & start animation2
+            });
+    </script>
+</body>
+</html>
