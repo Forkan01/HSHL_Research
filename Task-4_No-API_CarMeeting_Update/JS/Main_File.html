@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Car Animation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="map" style="width: 1900px; height: 1000px"></div>
+
+    <script>
+        //Route - One
+        var location1 = [53.381516,10.021215];   //Seeveta_start
+        var location2 = [53.639158,10.053988];   //Hamburg_end
+        //Route - Two
+        var location3 = [53.600651,9.827795];    //Schene_start
+        var location4 = [53.859119,10.694445];    //Luebeck_end
+        //Meeting Point
+        var location5 = [53.553713,10.024416];    //Berliner Tor, 20099 Hamburg
+
+        //OpenStreetMap as the tile source
+        var map = L.map('map').setView(location4, 16.49999999999999);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        //Adding Markers
+        var start_marker = L.marker(location1).addTo(map);
+        var end_marker = L.marker(location2).addTo(map);
+        var marker3 = L.marker(location3).addTo(map);
+        var marker4 = L.marker(location4).addTo(map);
+        var marker5 = L.marker(location5).addTo(map);
+
+        // Draw a circle at the meeting point
+        var meeting_circle = L.circle(location5, {
+            radius: 30,
+            color: 'green',
+            fillColor: 'green',
+            fillOpacity: 0.5
+        }).addTo(map);
+
+        // Defining the 1st car
+        var car_icon = L.icon({
+            iconUrl: 'car_icon.png',
+            iconSize: [100, 100],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        // Defining the 2nd car
+        var car_icon2 = L.icon({
+            iconUrl: 'car_icon2.png',
+            iconSize: [50, 50],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        //Adding Cars in the starting locations
+        var car_marker = L.marker(location1, {icon: car_icon}).addTo(map);
+        var car_marker2 = L.marker(location3, {icon: car_icon2}).addTo(map);
+
+        // Function to load CSV and parse coordinates
+        function loadCSV(url, callback) {
+            Papa.parse(url, {
+                download: true,
+                header: false,
+                complete: function(results) {
+                    var coordinates = results.data.map(function(row) {
+                        return [parseFloat(row[0]), parseFloat(row[1])];
+                    });
+                    callback(coordinates);
+                }
+            });
+        }
+        // Function to add circles at each coordinate
+        function addCircles(coordinates, color) {
+            coordinates.forEach(function(coord) {
+                L.circleMarker(coord, {
+                    radius: 5,
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.5
+                }).addTo(map);
+            });
+        }
+
+        var car1Arrived = false;
+        var car2Arrived = false;
+
+        // Function to check if both cars are in the meeting circle
+        function bothCarsInMeetingCircle() {
+            return meeting_circle.getBounds().contains(car_marker.getLatLng()) &&
+                   meeting_circle.getBounds().contains(car_marker2.getLatLng());
+        }
+
+        // Load and draw the 1st route
+        loadCSV('RouteVehicle1_Seeveta-Hamburg.csv', function(route_coordinates) {
+            var route_line = L.polyline(route_coordinates, {color: 'blue'}).addTo(map);
+            addCircles(route_coordinates, 'blue');
+            // Animate the 1st car along the route
+            var i = 0;
+            function animate() {
+                car_marker.setLatLng(route_coordinates[i]);
+                i++;
+                if (i < route_coordinates.length) {
+                    if (meeting_circle.getBounds().contains(car_marker.getLatLng()) && !car1Arrived) {
+                        car1Arrived = true;
+                        setTimeout(function() {
+                            if (bothCarsInMeetingCircle()) {
+                                setTimeout(function() {
+                                    setTimeout(animate, 20);
+                                }, 5000) // Stop for 5 seconds
+                            } else {
+                                setTimeout(animate, 20);  // Continue checking
+                            }
+                        }, 10000);  // Stop for 10 seconds
+                    } else {
+                        setTimeout(animate, 20);  //animation speed
+                    }
+                }
+            }
+            setTimeout(animate, 9000);  //Delay & start animation1
+        });
+
+        // Load and draw the 2nd route
+        loadCSV('RouteVehicle2_Schenefeld-Luebeck.csv', function(route_coordinates2) {
+            var route_line2 = L.polyline(route_coordinates2, {color: 'red'}).addTo(map);
+            addCircles(route_coordinates2, 'red');
+            // Animate the 2nd car along the new route
+            var j = 0;
+            function animate2() {
+                car_marker2.setLatLng(route_coordinates2[j]);
+                j++;
+                if (j < route_coordinates2.length) {
+                    if (meeting_circle.getBounds().contains(car_marker2.getLatLng()) && !car2Arrived) {
+                        car2Arrived = true;
+                        setTimeout(function() {
+                            if (bothCarsInMeetingCircle()) {
+                                setTimeout(function() {
+                                    setTimeout(animate2, 20);
+                                }, 5000)  // Stop for 3 second
+                            } else {
+                                setTimeout(animate2, 20);  // Continue checking
+                            }
+                        }, 3000);  // Stop for 3 seconds
+                    } else {
+                        setTimeout(animate2, 20);  //animation speed
+                    }
+                }
+            }
+            setTimeout(animate2, 9000);  // Delay & start animation2
+        });
+    </script>
+</body>
+</html>
