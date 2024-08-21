@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Car Animation with Package Transfer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="map" style="width: 1920px; height: 1080px"></div>
+
+    <script>
+                                                //Declarations:
+        const orsApiKey = '5b3ce3597851110001cf62482aa5927220e1482797ca6ea18c66dfa7'; // OpenRouteService API
+        const location1 = [53.381516, 10.021215]; // Car1 Start
+        var location2 = [53.553713,10.024416];    // Car1 Mid
+        var location5 = [53.639158, 10.053988];   // Car1 Final
+
+        const location3 = [53.600651, 9.827795];  // Car2 Start
+        var location4 = [53.553713,10.024416];    // Car2 Mid
+        var location6 = [53.859119, 10.694445];   // Car2 Final
+
+        // OpenStreetMap as the tile source
+        var map = L.map('map').setView(location4, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 15,
+        }).addTo(map);
+
+        // Adding Markers
+        var c1_start = L.marker(location1).addTo(map);
+        var c1_mid = L.marker(location2).addTo(map);
+        var c1_final = L.marker(location5).addTo(map);
+
+        var c2_start = L.marker(location3).addTo(map);
+        var c2_mid = L.marker(location4).addTo(map);
+        var c2_final = L.marker(location6).addTo(map);
+
+        var car_icon = L.icon({         // Defining the 1st car
+            iconUrl: 'car_icon.png',
+            iconSize: [100, 100],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        var package_icon = L.icon({     // Defining the package
+            iconUrl: 'package_icon.png',
+            iconSize: [30, 30],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        var car_icon2 = L.icon({        // Defining the 2nd car
+            iconUrl: 'car_icon2.png',
+            iconSize: [50, 50],
+            iconAnchor: [25, 25],
+            popupAnchor: [0, 0],
+        });
+        // Adding Cars in the starting locations
+        var car_marker = L.marker(location1, {icon: car_icon}).addTo(map);
+        var car_marker2 = L.marker(location3, {icon: car_icon2}).addTo(map);
+        var package_marker = L.marker(location1, {icon: package_icon}).addTo(map);
+
+        //Car1 Circle
+        var car1_circle = L.circle(location1, {
+            radius: 5000,
+            color: 'blue',
+            fillColor: 'blue',
+            fillOpacity: 0.2
+        }).addTo(map);
+
+        var packageTransferred = false;
+        var waitDone = false;           // 1 time flag
+        var nearestParking = null;
+                                                      //Functions:
+        // F1: Distance between two coordinates
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the Earth in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+            return distance;
+        }
+        // F2: All parking lots within the circle using Nominatim API
+        function findParkingLots(callback) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=parking&bounded=1&viewbox=${car_marker.getLatLng().lng-0.05},${car_marker.getLatLng().lat+0.05},${car_marker.getLatLng().lng+0.05},${car_marker.getLatLng().lat-0.05}`;
+            console.log('Finding parking lots with URL:', url);
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Parking lot data:', data);
+                let parkingLocations = [];
+                data.forEach(parking => {
+                    const parkingLocation = [parseFloat(parking.lat), parseFloat(parking.lon)];
+                    const distance = calculateDistance(car_marker.getLatLng().lat, car_marker.getLatLng().lng, parkingLocation[0], parkingLocation[1]);
+                    if (distance <= car1_circle.getRadius() / 1000) { // Convert radius to km
+                        parkingLocations.push(parkingLocation);
+                    }
+                });
+                if (parkingLocations.length > 0) {
+                    let minDistance = Infinity;
+                    parkingLocations.forEach(parkingLocation => {
+                        const distance = calculateDistance(car_marker.getLatLng().lat, car_marker.getLatLng().lng, parkingLocation[0], parkingLocation[1]);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearestParking = parkingLocation;
+                        }
+                    });
+                    callback(parkingLocations);
+                } else {
+                    console.error('No parking lots found within the search radius');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        // F3: Route coordinates using OpenRouteService API
+        function getRouteCoordinates(start, end, callback) {
+            console.log('Getting route from', start, 'to', end);
+            fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${orsApiKey}&start=${start[1]},${start[0]}&end=${end[1]},${end[0]}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Route data:', data);
+                const coordinates = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                callback(coordinates);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        // F4: Move Car1 to final location-5
+        function moveCar1ToDestination() {
+            getRouteCoordinates(nearestParking, location5, function(route_coordinates) {
+                var carA_path = L.polyline(route_coordinates, {color: 'green'}).addTo(map);
+                var m = 0;
+                function animateA() {
+                    car_marker.setLatLng(route_coordinates[m]);
+                    m++;
+                    if (m < route_coordinates.length) {
+                        setTimeout(animateA, 20);
+                    }
+                }
+                animateA();
+            });
+        }
+        // F5: Move Car2 to final location-6
+        function moveCar2ToDestination() {
+            getRouteCoordinates(nearestParking, location6, function(route_coordinates2) {
+                var carB_path = L.polyline(route_coordinates2, {color: 'orange'}).addTo(map);
+                var n = 0;
+                function animateB() {
+                    car_marker2.setLatLng(route_coordinates2[n]);
+                    package_marker.setLatLng(route_coordinates2[n]);
+                    n++;
+                    if (n < route_coordinates2.length) {
+                        setTimeout(animateB, 20);
+                    }
+                }
+                animateB();
+            });
+        }
+        // F6: Move Car1 to nearestParking
+        function moveCar1ToNearestParking() {
+            if (nearestParking) {
+                getRouteCoordinates(location2, nearestParking, function(route_coordinates) {
+                    var car1_parking_path = L.polyline(route_coordinates, {color: 'black'}).addTo(map);
+                    var k = 0;
+                    function animateToParking() {
+                        car_marker.setLatLng(route_coordinates[k]);
+                        if (!packageTransferred) {
+                          package_marker.setLatLng(route_coordinates[k]);
+                        }
+                        k++;
+                        if (k < route_coordinates.length) {
+                            setTimeout(animateToParking, 40);
+                        } else {
+                            //packageTransferred = true;
+                            setTimeout(function() {
+                                packageTransferred = true;
+                                moveCar1ToDestination();
+                            }, 3000);  // Wait for 3 seconds before moving to the final destination
+                        }
+                    }
+                    animateToParking();
+                });
+            } else {
+                console.error('Nearest parking location not found');
+            }
+        }
+        // F7: Move Car2 to nearestParking
+        function moveCar2ToNearestParking() {
+            if (nearestParking) {
+                getRouteCoordinates(location4, nearestParking, function(route_coordinates) {
+                    var car2_parking_path = L.polyline(route_coordinates, {color: 'yellow'}).addTo(map);
+                    var l = 0;
+                    function animate2ToParking() {
+                        car_marker2.setLatLng(route_coordinates[l]);
+                        if (packageTransferred) {
+                          package_marker.setLatLng(route_coordinates[l]);
+                        }
+                        l++;
+                        if (l < route_coordinates.length) {
+                            setTimeout(animate2ToParking, 40);
+                        } else {
+                            setTimeout(function() {
+                                moveCar2ToDestination();
+                            }, 3000);  // Wait for 3 seconds before moving to the final destination
+                        }
+                    }
+                    animate2ToParking();
+                });
+            } else {
+                console.error('Nearest parking location not found');
+            }
+        }
+                                                        // Main:
+        //Animate Car1 initially
+        getRouteCoordinates(location1, location2, function(route_coordinates1) {
+            var car1_path = L.polyline(route_coordinates1, {color: 'blue'}).addTo(map);
+            var i = 0;
+            function animate() {
+                car_marker.setLatLng(route_coordinates1[i]);
+                car1_circle.setLatLng(route_coordinates1[i]);
+                if (!packageTransferred) {
+                    package_marker.setLatLng(route_coordinates1[i]);  //Package is with Car1
+                }
+                i++;
+                if (i < route_coordinates1.length) {
+                    if (car1_circle.getBounds().contains(car_marker2.getLatLng())) {
+                        console.log('Car2 is within Car1 circle');
+                        if (!waitDone) {
+                            // Find all parking lots within the circle and mark them in red
+                            findParkingLots(function(parkingLocations) {
+                                console.log('Parking locations within the circle:', parkingLocations);
+                                let minDistance = Infinity;
+                                parkingLocations.forEach(parkingLocation => {
+                                    L.marker(parkingLocation, {icon: L.icon({iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'})}).addTo(map).bindPopup('Parking Lot').openPopup();
+                                    const distance = calculateDistance(car_marker.getLatLng().lat, car_marker.getLatLng().lng, parkingLocation[0], parkingLocation[1]);
+                                    if (distance < minDistance) {
+                                        minDistance = distance;
+                                        nearestParking = parkingLocation;
+                                    }
+                                });
+                                if (nearestParking) {
+                                    setTimeout(function() {
+                                        L.marker(nearestParking, {icon: L.icon({iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'})}).addTo(map).bindPopup('Nearest Parking Lot').openPopup();
+                                    }, 1500);   //Nearest parking highlighted
+                                }
+                            });
+                            setTimeout(function() {
+                                moveCar1ToNearestParking();
+                                moveCar2ToNearestParking();
+                            }, 5000);
+                            waitDone = true;
+                        }
+                    } else {
+                        setTimeout(animate, 30);
+                    }
+                }
+            }
+            setTimeout(animate, 4000);  // Start animation with 5s delay
+        });
+        // Animate Car2 initially
+        getRouteCoordinates(location3, location4, function(route_coordinates2) {
+            var car2_path = L.polyline(route_coordinates2, {color: 'red'}).addTo(map);
+            var j = 0;
+            function animate2() {
+                car_marker2.setLatLng(route_coordinates2[j]);
+                j++;
+                if (j < route_coordinates2.length) {
+                    if (car1_circle.getBounds().contains(car_marker2.getLatLng())) {
+                        console.log('Car2 is within Car1 circle');
+                        if (!waitDone) {
+                            setTimeout(function() {
+                                moveCar2ToNearestParking();
+                                moveCar1ToNearestParking();
+                            }, 5000);
+                        }
+                    } else {
+                        setTimeout(animate2, 30);
+                    }
+                }
+            }
+            setTimeout(animate2, 4000);
+        });
+    </script>
+</body>
+</html>
