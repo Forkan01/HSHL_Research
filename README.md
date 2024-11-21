@@ -8,7 +8,7 @@
 ### Task-6: JS: OSM Car & parking detection-Driving to Nearest parking & destination-package transfer
 ### Task-7: JS & Python: Final version with corrections
 
-### Other Works outside this repo.
+### Other Works outside this repo:
 ## Carla:
 ### Task-1: Basic driving on Carla
 ### Task-2: Autonomous Driving with DL
