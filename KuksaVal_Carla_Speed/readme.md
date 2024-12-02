@@ -7,9 +7,10 @@ Open a terminal and run the following command to clone the Kuksa.valrepository f
 
 ## 2. Build and Run the Kuksa.valServer:
 - Open Docker
-- Terminal:  docker-compose up --build
+- In Terminal:
+  docker-compose up --build
 
-[ Helpfull:
+### [ Helpfull:
 3. Check your running containers by:
 - docker ps
 Inspect the server logs:
@@ -29,8 +30,9 @@ Example commands to verify data points:
 - quit      ]
 
 # B. Execution:
-1. The 'Direct' folder contains the all in one file, which can directly get the vehicle speed within the code.
-2. The other three files as based on server-client system.
+## 1. The 'Direct' folder contains the all in one file, which can directly get the vehicle speed within the code.
+   
+## 2. The other three files as based on server-client system.
 - Create 3 terminals
 - 1st open the 'speed_provider.py'
 - 2nd open the original 'manual_control.py' file. (keep Carla on beforehand)
