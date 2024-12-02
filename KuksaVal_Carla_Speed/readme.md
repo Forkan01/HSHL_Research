@@ -1,4 +1,4 @@
-A. Steps to Get Started:
+# A. Steps to Get Started:
 1. Clone the Kuksa.val Repository:
 Open a terminal and run the following command to clone the Kuksa.valrepository from GitHub:
 
@@ -9,6 +9,7 @@ Open a terminal and run the following command to clone the Kuksa.valrepository f
 - Open Docker
 - Terminal:  docker-compose up --build
 
+[ Helpfull:
 3. Check your running containers by:
 - docker ps
 Inspect the server logs:
@@ -20,7 +21,7 @@ Verify that the server is listening on the expected port (e.g., 55555)
 
 5. Use the Kuksa.valCLI:
 You can interact with the server using the Kuksa.valCLI to check for data points.
-- docker run -it --rm --net=host ghcr.io/eclipse/kuksa.val/databroker-cli:master
+- docker run -it --rm --net=host ghcr.io/eclipse/kuksa.val/databroker-cli:master ]
 
 Example commands to verify data points:
 - get Vehicle.Speed
