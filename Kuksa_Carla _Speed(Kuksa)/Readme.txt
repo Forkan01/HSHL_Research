@@ -1,4 +1,4 @@
-# 1. Clone the Kuksa.val Repository:
+#1. Clone the Kuksa.val Repository:
 Open Terminal:
 - git clone https://github.com/eclipse/kuksa.val.git
 
