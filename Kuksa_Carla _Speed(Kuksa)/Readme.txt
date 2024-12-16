@@ -1,8 +1,8 @@
-#1. Clone the Kuksa.val Repository:
+# 1. Clone the Kuksa.val Repository:
 Open Terminal:
 - git clone https://github.com/eclipse/kuksa.val.git
 
-2. Build and Run the Kuksa.valServer:
+## 2. Build and Run the Kuksa.valServer:
 Open Docker & minimize.
 Go back to the Terminal:
 - cd kuksa.val
